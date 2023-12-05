@@ -25,6 +25,6 @@ func (m *Manager) UpdateTasks() {
 	fmt.Println("I will update tasks")
 }
 
-func (m *Manager) SendWorker() {
+func (m *Manager) SendWork() {
 	fmt.Println("I will send work to workers")
 }
