@@ -11,11 +11,20 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
+	"github.com/hugoleodev/pentagon/task"
 )
 
 type Docker struct {
 	Client *client.Client
 	Config Config
+}
+
+func New(c *Config) *Docker {
+	dc, _ := client.NewClientWithOpts(client.FromEnv)
+	return &Docker{
+		Client: dc,
+		Config: *c,
+	}
 }
 
 type Config struct {
@@ -31,6 +40,18 @@ type Config struct {
 	Disk          int64
 	Env           []string
 	RestartPolicy string
+}
+
+func NewConfig(t *task.Task) *Config {
+	return &Config{
+		Name:          t.Name,
+		ExposedPorts:  t.ExposedPorts,
+		Image:         t.Image,
+		Cpu:           t.Cpu,
+		Memory:        t.Memory,
+		Disk:          t.Disk,
+		RestartPolicy: t.RestartPolicy,
+	}
 }
 
 const (
