@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/docker/docker/client"
@@ -11,6 +13,7 @@ import (
 	"github.com/hugoleodev/pentagon/internal/docker"
 	"github.com/hugoleodev/pentagon/task"
 	"github.com/hugoleodev/pentagon/worker"
+	"github.com/hugoleodev/pentagon/worker/api"
 )
 
 func createContainer() (*docker.Docker, *docker.DockerResult) {
@@ -56,43 +59,39 @@ func stopContainer(d *docker.Docker, id string) *docker.DockerResult {
 }
 
 func main() {
-	db := make(map[uuid.UUID]*task.Task)
+	host := os.Getenv("PENTAGON_HOST")
+	port, _ := strconv.Atoi(os.Getenv("PENTAGON_PORT"))
+
+	fmt.Println("Starting Pentagon Worker")
 
 	w := worker.Worker{
-		Name:  "worker#001",
 		Queue: *queue.New(),
-		Db:    db,
+		Db:    make(map[uuid.UUID]*task.Task),
 	}
 
-	t := task.Task{
-		ID:    uuid.New(),
-		Name:  "task-container-1",
-		State: task.Scheduled,
-		Image: "lmmendes/http-hello-world",
+	api := api.API{
+		Address: host,
+		Port:    port,
+		Worker:  &w,
 	}
 
-	fmt.Println("starting task")
-	w.AddTask(t)
+	go runTasks(&w)
+	api.Start(host, port, &w)
+}
 
-	result := w.RunTask()
+func runTasks(w *worker.Worker) {
+	for {
+		if w.Queue.Len() != 0 {
+			result := w.RunTask()
 
-	if result.Error != nil {
-		panic(result.Error)
-	}
+			if result.Error != nil {
+				fmt.Printf("Error running task: %v\n", result.Error)
+			}
+		} else {
+			fmt.Println("No tasks to run yet")
+		}
+		fmt.Println("Sleeping for 10 seconds")
 
-	t.ContainerID = result.ContainerId
-
-	fmt.Printf("Task %s with id %s is running with container ID %s\n", t.Name, t.ID, t.ContainerID)
-
-	fmt.Println("Sleepy time")
-
-	time.Sleep(30 * time.Second)
-
-	fmt.Printf("stopping task %s with id %s in container %s\n", t.Name, t.ID, t.ContainerID)
-	t.State = task.Completed
-	w.AddTask(t)
-	result = w.RunTask()
-	if result.Error != nil {
-		panic(result.Error)
+		time.Sleep(10 * time.Second)
 	}
 }

@@ -27,6 +27,16 @@ func (w *Worker) CollectStats() {
 	fmt.Println("I will collect the stats")
 }
 
+func (w *Worker) GetTasks() []*task.Task {
+	tasks := []*task.Task{}
+
+	for _, t := range w.Db {
+		tasks = append(tasks, t)
+	}
+
+	return tasks
+}
+
 // RunTask runs a task from the worker's queue and
 // returns the result of the task execution.
 func (w *Worker) RunTask() docker.DockerResult {
