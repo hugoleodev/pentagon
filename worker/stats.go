@@ -3,14 +3,14 @@ package worker
 import (
 	"log"
 
-	"github.com/c9s/goprocinfo/linux"
+	"github.com/hugoleodev/pentagon/stats"
 )
 
 type Stats struct {
-	Memory    *linux.MemInfo
-	Disk      *linux.Disk
-	Cpu       *linux.CPUStat
-	Load      *linux.LoadAvg
+	Memory    *stats.MemInfo
+	Disk      *stats.Disk
+	Cpu       *stats.CPUStat
+	Load      *stats.LoadAvg
 	TaskCount int
 }
 
@@ -43,15 +43,14 @@ func (s *Stats) DiskUsed() uint64 {
 }
 
 func (s *Stats) CpuUsage() float64 {
-	idle := s.Cpu.Idle + s.Cpu.IOWait
-	nonIdle := s.Cpu.User + s.Cpu.Nice + s.Cpu.System + s.Cpu.IRQ + s.Cpu.SoftIRQ + s.Cpu.Steal
-	total := idle + nonIdle
+	u, err := stats.CpuUsage()
 
-	if total == 0 {
+	if err != nil {
+		log.Printf("Error reading cpu usage: %v\n", err)
 		return 0
 	}
 
-	return (float64(total) - float64(idle)) / float64(total)
+	return u
 }
 
 func GetStats() *Stats {
@@ -63,43 +62,43 @@ func GetStats() *Stats {
 	}
 }
 
-func GetMemoryInfo() *linux.MemInfo {
-	memstats, err := linux.ReadMemInfo("/proc/meminfo")
+func GetMemoryInfo() *stats.MemInfo {
+	memstats, err := stats.ReadMemInfo()
 
 	if err != nil {
-		log.Printf("Error reading /proc/meminfo: %v\n", err)
-		return &linux.MemInfo{}
+		log.Printf("Error reading meminfo: %v\n", err)
+		return &stats.MemInfo{}
 	}
 
 	return memstats
 }
 
-func GetDiskInfo() *linux.Disk {
-	diskstats, err := linux.ReadDisk("/")
+func GetDiskInfo() *stats.Disk {
+	diskstats, err := stats.ReadDisk("/")
 	if err != nil {
 		log.Printf("Error reading from /: %v\n", err)
-		return &linux.Disk{}
+		return &stats.Disk{}
 	}
 
 	return diskstats
 }
 
-func GetCpuStats() *linux.CPUStat {
-	stats, err := linux.ReadStat("/proc/stat")
+func GetCpuStats() *stats.CPUStat {
+	s, err := stats.ReadStat()
 	if err != nil {
-		log.Printf("Error reading /proc/stat: %v\n", err)
-		return &linux.CPUStat{}
+		log.Printf("Error reading cpu stats: %v\n", err)
+		return &stats.CPUStat{}
 	}
 
-	return &stats.CPUStatAll
+	return s
 }
 
-func GetLoadAvg() *linux.LoadAvg {
-	stats, err := linux.ReadLoadAvg("/proc/loadavg")
+func GetLoadAvg() *stats.LoadAvg {
+	s, err := stats.ReadLoadAvg()
 	if err != nil {
-		log.Printf("Error reading /proc/loadavg: %v\n", err)
-		return &linux.LoadAvg{}
+		log.Printf("Error reading loadavg: %v\n", err)
+		return &stats.LoadAvg{}
 	}
 
-	return stats
+	return s
 }

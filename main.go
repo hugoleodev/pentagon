@@ -14,6 +14,7 @@ import (
 	"github.com/hugoleodev/pentagon/task"
 	"github.com/hugoleodev/pentagon/worker"
 	"github.com/hugoleodev/pentagon/worker/api"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 func createContainer() (*docker.Docker, *docker.DockerResult) {
@@ -75,6 +76,8 @@ func main() {
 		Worker:  &w,
 	}
 
+	// GetStatsFromGoPsUtil()
+
 	go runTasks(&w)
 	go w.CollectStats()
 	api.Start(host, port, &w)
@@ -95,4 +98,16 @@ func runTasks(w *worker.Worker) {
 
 		time.Sleep(10 * time.Second)
 	}
+}
+
+func GetStatsFromGoPsUtil() {
+	v, err := mem.VirtualMemory()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Printf("Total: %v, Free:%v, Available:%v, UsedPercent:%f%%\n", v.Total, v.Free, v.Available, v.UsedPercent)
+
+	fmt.Println(v)
 }
