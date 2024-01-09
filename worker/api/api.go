@@ -18,10 +18,12 @@ type API struct {
 }
 
 func (a *API) initRouter(app *fiber.App) {
-	a.Router = app.Group("/api/tasks")
-	a.Router.Get("/", a.GetTasksHandler)
-	a.Router.Post("/", a.StartTaskHandler)
-	a.Router.Delete("/:taskId", a.StopTaskHandler)
+	a.Router = app.Group("/api")
+	a.Router.Get("/tasks", a.GetTasksHandler)
+	a.Router.Post("/tasks", a.StartTaskHandler)
+	a.Router.Delete("/tasks/:taskId", a.StopTaskHandler)
+
+	a.Router.Get("/stats", a.GetStatsHandler)
 }
 
 func (a *API) Start(address string, port int, worker *worker.Worker) {
@@ -82,4 +84,9 @@ func (a *API) StopTaskHandler(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusNoContent).JSON(responseMessage)
+}
+
+func (a *API) GetStatsHandler(ctx *fiber.Ctx) error {
+	fmt.Println("Getting stats")
+	return ctx.Status(fiber.StatusOK).JSON(a.Worker.Stats)
 }
