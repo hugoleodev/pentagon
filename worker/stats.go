@@ -7,10 +7,11 @@ import (
 )
 
 type Stats struct {
-	Memory *linux.MemInfo
-	Disk   *linux.Disk
-	Cpu    *linux.CPUStat
-	Load   *linux.LoadAvg
+	Memory    *linux.MemInfo
+	Disk      *linux.Disk
+	Cpu       *linux.CPUStat
+	Load      *linux.LoadAvg
+	TaskCount int
 }
 
 func (s *Stats) MemTotalKb() uint64 {
