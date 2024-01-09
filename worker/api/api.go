@@ -42,7 +42,7 @@ func (a *API) StartTaskHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	result := a.Worker.StartTask(te.Task)
+	result := a.Worker.StartTask(&te.Task)
 	log.Printf("Adding task %s: %v\n", te.Task.ID, result.Error)
 
 	return ctx.Status(fiber.StatusCreated).JSON(te.Task)
@@ -55,7 +55,6 @@ func (a *API) GetTasksHandler(ctx *fiber.Ctx) error {
 }
 
 func (a *API) StopTaskHandler(ctx *fiber.Ctx) error {
-	fmt.Println("Cheguei aqui")
 	taskID := ctx.Params("taskId")
 
 	if taskID == "" {
@@ -67,7 +66,6 @@ func (a *API) StopTaskHandler(ctx *fiber.Ctx) error {
 	tID, err := uuid.Parse(taskID)
 	taskToStop, ok := a.Worker.Db[tID]
 	if !ok || err != nil {
-		fmt.Println("Cheguei aqui")
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "task not found",
 		})

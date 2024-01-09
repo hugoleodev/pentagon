@@ -59,9 +59,9 @@ func (w *Worker) RunTask() docker.DockerResult {
 	if task.ValidStateTransition(taskPersisted.State, taskQueued.State) {
 		switch taskQueued.State {
 		case task.Scheduled:
-			result = w.StartTask(*taskPersisted)
+			result = w.StartTask(taskPersisted)
 		case task.Completed:
-			result = w.StopTask(*taskPersisted)
+			result = w.StopTask(taskPersisted)
 		default:
 			result.Error = fmt.Errorf("We should not be here")
 		}
@@ -73,23 +73,23 @@ func (w *Worker) RunTask() docker.DockerResult {
 	return result
 }
 
-func (w *Worker) StartTask(t task.Task) docker.DockerResult {
+func (w *Worker) StartTask(t *task.Task) docker.DockerResult {
 	ctx := context.Background()
 	t.StartTime = time.Now().UTC()
-	config := docker.NewConfig(&t)
+	config := docker.NewConfig(t)
 	d := docker.New(config)
 	result := d.Run(ctx)
 
 	if result.Error != nil {
 		log.Printf("Error running task %s: %v\n", t.ID, result.Error)
 		t.State = task.Failed
-		w.Db[t.ID] = &t
+		w.Db[t.ID] = t
 		return result
 	}
 
 	t.ContainerID = result.ContainerId
 	t.State = task.Running
-	w.Db[t.ID] = &t
+	w.Db[t.ID] = t
 
 	log.Printf("Started container %s with ID %v for task %v", config.Name, t.ContainerID, t.ID)
 
@@ -97,10 +97,10 @@ func (w *Worker) StartTask(t task.Task) docker.DockerResult {
 
 }
 
-func (w *Worker) StopTask(t task.Task) docker.DockerResult {
+func (w *Worker) StopTask(t *task.Task) docker.DockerResult {
 	ctx := context.Background()
 
-	config := docker.NewConfig(&t)
+	config := docker.NewConfig(t)
 	d := docker.New(config)
 
 	result := d.Stop(ctx, t.ContainerID)
@@ -111,7 +111,7 @@ func (w *Worker) StopTask(t task.Task) docker.DockerResult {
 
 	t.FinishTime = time.Now().UTC()
 	t.State = task.Completed
-	w.Db[t.ID] = &t
+	w.Db[t.ID] = t
 	log.Printf("Stopped and removed container %s with ID %v for task %v", config.Name, t.ContainerID, t.ID)
 
 	return result

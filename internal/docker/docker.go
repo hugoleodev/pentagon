@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 	"github.com/hugoleodev/pentagon/task"
+	"github.com/moby/moby/pkg/namesgenerator"
 )
 
 type Docker struct {
@@ -43,6 +44,11 @@ type Config struct {
 }
 
 func NewConfig(t *task.Task) *Config {
+
+	if t.Name == "" {
+		t.Name = namesgenerator.GetRandomName(1)
+	}
+
 	return &Config{
 		Name:          t.Name,
 		ExposedPorts:  t.ExposedPorts,
