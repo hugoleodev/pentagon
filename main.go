@@ -11,6 +11,7 @@ import (
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
 	"github.com/hugoleodev/pentagon/internal/docker"
+	"github.com/hugoleodev/pentagon/manager"
 	"github.com/hugoleodev/pentagon/task"
 	"github.com/hugoleodev/pentagon/worker"
 	"github.com/hugoleodev/pentagon/worker/api"
@@ -75,6 +76,44 @@ func main() {
 		Port:    port,
 		Worker:  &w,
 	}
+
+	workers := []string{fmt.Sprintf("%s:%d", host, port)}
+	m := manager.New(workers)
+
+	for i := 0; i < 5; i++ {
+		t := task.Task{
+			ID:    uuid.New(),
+			Name:  fmt.Sprintf("task-container-%d", i),
+			State: task.Scheduled,
+			Image: "postgres",
+		}
+		te := task.TaskEvent{
+			ID:    uuid.New(),
+			Task:  t,
+			State: task.Running,
+		}
+		m.AddTask(te)
+		m.SendWork()
+	}
+
+	go func() {
+		time.Sleep(20 * time.Second)
+		for {
+			fmt.Printf("[Manager] Updating tasks from %d workers\n", len(m.Workers))
+			m.UpdateTasks()
+			time.Sleep(15 * time.Second)
+		}
+	}()
+
+	go func() {
+		time.Sleep(20 * time.Second)
+		for {
+			for _, t := range m.TaskDb {
+				fmt.Printf("[Manager] Task: id: %s, state: %d\n", t.ID, t.State)
+				time.Sleep(15 * time.Second)
+			}
+		}
+	}()
 
 	// GetStatsFromGoPsUtil()
 
