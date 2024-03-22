@@ -3,8 +3,9 @@ package docker
 import (
 	"context"
 	"io"
-	"log"
 	"os"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -77,7 +78,7 @@ func (d *Docker) Run(ctx context.Context) DockerResult {
 	reader, err := d.Client.ImagePull(ctx, d.Config.Image, types.ImagePullOptions{})
 
 	if err != nil {
-		log.Printf("Error pulling image %s: %v\n", d.Config.Image, err)
+		log.Info().Msgf("Error pulling image %s: %v\n", d.Config.Image, err)
 		return DockerResult{Error: err}
 	}
 
@@ -108,14 +109,14 @@ func (d *Docker) Run(ctx context.Context) DockerResult {
 	resp, err := d.Client.ContainerCreate(ctx, &cc, &hc, nil, nil, d.Config.Name)
 
 	if err != nil {
-		log.Printf("Error creating container %s using image %s: %v\n", d.Config.Name, d.Config.Image, err)
+		log.Info().Msgf("Error creating container %s using image %s: %v\n", d.Config.Name, d.Config.Image, err)
 		return DockerResult{Error: err}
 	}
 
 	err = d.Client.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
 
 	if err != nil {
-		log.Printf("Error starting container %s with ID %s: %v\n", d.Config.Name, resp.ID, err)
+		log.Info().Msgf("Error starting container %s with ID %s: %v\n", d.Config.Name, resp.ID, err)
 		return DockerResult{Error: err}
 	}
 
@@ -125,7 +126,7 @@ func (d *Docker) Run(ctx context.Context) DockerResult {
 	})
 
 	if err != nil {
-		log.Printf("Error getting logs for container %s with ID %s: %v\n", d.Config.Name, resp.ID, err)
+		log.Info().Msgf("Error getting logs for container %s with ID %s: %v\n", d.Config.Name, resp.ID, err)
 		return DockerResult{Error: err}
 	}
 
@@ -140,12 +141,12 @@ func (d *Docker) Run(ctx context.Context) DockerResult {
 }
 
 func (d *Docker) Stop(ctx context.Context, id string) DockerResult {
-	log.Printf("attempting to stop container %v", id)
+	log.Info().Msgf("attempting to stop container %v", id)
 
 	err := d.Client.ContainerStop(ctx, id, container.StopOptions{})
 
 	if err != nil {
-		log.Printf("Error stopping container %s with ID %s: %v\n", d.Config.Name, id, err)
+		log.Info().Msgf("Error stopping container %s with ID %s: %v\n", d.Config.Name, id, err)
 		return DockerResult{Error: err}
 	}
 
@@ -156,7 +157,7 @@ func (d *Docker) Stop(ctx context.Context, id string) DockerResult {
 	})
 
 	if err != nil {
-		log.Printf("Error removing container %s with ID %s: %v\n", d.Config.Name, id, err)
+		log.Info().Msgf("Error removing container %s with ID %s: %v\n", d.Config.Name, id, err)
 		return DockerResult{Error: err}
 	}
 

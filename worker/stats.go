@@ -1,9 +1,8 @@
 package worker
 
 import (
-	"log"
-
 	"github.com/hugoleodev/pentagon/stats"
+	"github.com/rs/zerolog/log"
 )
 
 type Stats struct {
@@ -46,7 +45,7 @@ func (s *Stats) CpuUsage() float64 {
 	u, err := stats.CpuUsage()
 
 	if err != nil {
-		log.Printf("Error reading cpu usage: %v\n", err)
+		log.Info().Msgf("Error reading cpu usage: %v\n", err)
 		return 0
 	}
 
@@ -66,7 +65,7 @@ func GetMemoryInfo() *stats.MemInfo {
 	memstats, err := stats.ReadMemInfo()
 
 	if err != nil {
-		log.Printf("Error reading meminfo: %v\n", err)
+		log.Info().Msgf("Error reading meminfo: %v\n", err)
 		return &stats.MemInfo{}
 	}
 
@@ -76,7 +75,7 @@ func GetMemoryInfo() *stats.MemInfo {
 func GetDiskInfo() *stats.Disk {
 	diskstats, err := stats.ReadDisk("/")
 	if err != nil {
-		log.Printf("Error reading from /: %v\n", err)
+		log.Info().Msgf("Error reading from /: %v\n", err)
 		return &stats.Disk{}
 	}
 
@@ -86,7 +85,7 @@ func GetDiskInfo() *stats.Disk {
 func GetCpuStats() *stats.CPUStat {
 	s, err := stats.ReadStat()
 	if err != nil {
-		log.Printf("Error reading cpu stats: %v\n", err)
+		log.Info().Msgf("Error reading cpu stats: %v\n", err)
 		return &stats.CPUStat{}
 	}
 
@@ -96,7 +95,7 @@ func GetCpuStats() *stats.CPUStat {
 func GetLoadAvg() *stats.LoadAvg {
 	s, err := stats.ReadLoadAvg()
 	if err != nil {
-		log.Printf("Error reading loadavg: %v\n", err)
+		log.Info().Msgf("Error reading loadavg: %v\n", err)
 		return &stats.LoadAvg{}
 	}
 

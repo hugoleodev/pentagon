@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/golang-collections/collections/queue"
 	"github.com/google/uuid"
@@ -57,39 +59,39 @@ func (m *Manager) SelectWorker() string {
 	return m.Workers[newWorker]
 }
 
-func (m *Manager) UpdateTasks() {
+func (m *Manager) updateTasks() {
 	for _, w := range m.Workers {
-		fmt.Println("Worker >>>", w)
-		log.Printf("Checking worker %v for task updates\n", w)
+		log.Info().Msgf("Worker: %v", w)
+		log.Info().Msgf("Checking worker %v for task updates\n", w)
 		url := fmt.Sprintf("http://%s/api/tasks", w)
 		resp, err := http.Get(url)
 
 		if err != nil {
-			log.Printf("Unable to get tasks from worker %v: %v\n", w, err)
+			log.Info().Msgf("Unable to get tasks from worker %v: %v\n", w, err)
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			log.Printf("Error sending request: %v\n", err)
+			log.Info().Msgf("Error sending request: %v\n", err)
 		}
 
 		d := json.NewDecoder(resp.Body)
 		var tasks []*task.Task
 		err = d.Decode(&tasks)
 		if err != nil {
-			log.Printf("Unable unmarshaling tasks: %s\n", err.Error())
+			log.Info().Msgf("Unable unmarshaling tasks: %s\n", err.Error())
 		}
 
 		for _, t := range tasks {
-			log.Printf("Attempting to update task %s\n", t.ID)
+			log.Info().Msgf("Attempting to update task %s\n", t.ID)
 
 			_, ok := m.TaskDb[t.ID.String()]
 			if !ok {
-				log.Printf("Task %s not found\n", t.ID)
+				log.Info().Msgf("Task %s not found\n", t.ID)
 			}
 
 			if m.TaskDb[t.ID.String()].State != t.State {
 				m.TaskDb[t.ID.String()].State = t.State
-				log.Printf("Task %s state updated\n", t.ID)
+				log.Info().Msgf("Task %s state updated\n", t.ID)
 			}
 
 			m.TaskDb[t.ID.String()].StartTime = t.StartTime
@@ -106,7 +108,7 @@ func (m *Manager) SendWork() {
 		e := m.Pending.Dequeue()
 		te := e.(task.TaskEvent)
 		t := te.Task
-		log.Printf("Pulled %v of pending queue\n", t)
+		log.Info().Msgf("Pulled %v of pending queue\n", t)
 
 		m.EventDb[te.ID.String()] = &te
 		m.WorkerTaskMap[w] = append(m.WorkerTaskMap[w], te.Task.ID)
@@ -118,14 +120,15 @@ func (m *Manager) SendWork() {
 
 		data, err := json.Marshal(te)
 		if err != nil {
-			log.Printf("Unable to marshal task event: %v\n", err)
+			log.Info().Msgf("Unable to marshal task event: %v\n", err)
 		}
 
 		url := fmt.Sprintf("http://%s/api/tasks", w)
+		log.Info().Msgf("sending request to %v", url)
 		resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 
 		if err != nil {
-			log.Printf("Error connecting to %v: %v\n", w, err)
+			log.Info().Msgf("Error connecting to %v: %v\n", w, err)
 			m.Pending.Enqueue(te)
 			return
 		}
@@ -135,25 +138,52 @@ func (m *Manager) SendWork() {
 			e := worker.ErrResponse{}
 			err := d.Decode(&e)
 			if err != nil {
-				log.Printf("Error decoding response: %s\n", err.Error())
+				log.Info().Msgf("Error decoding response: %s\n", err.Error())
 				return
 			}
-			log.Printf("Response error (%d): %s", e.HTTPStatusCode, e.Message)
+			log.Info().Msgf("Response error (%d): %s", e.HTTPStatusCode, e.Message)
 			return
 		}
 
 		t = task.Task{}
 		err = d.Decode(&t)
 		if err != nil {
-			log.Printf("Error decoding response: %s\n", err.Error())
+			log.Info().Msgf("Error decoding response: %s\n", err.Error())
 			return
 		}
-		log.Printf("%#v\n", t)
+		log.Info().Msgf("%#v\n", t)
 	} else {
-		log.Printf("Pending queue is empty\n")
+		log.Info().Msgf("Pending queue is empty\n")
 	}
 }
 
 func (m *Manager) AddTask(te task.TaskEvent) {
 	m.Pending.Enqueue(te)
+}
+
+func (m *Manager) GetTasks() []*task.Task {
+	tasks := []*task.Task{}
+	for _, t := range m.TaskDb {
+		tasks = append(tasks, t)
+	}
+	return tasks
+}
+
+func (m *Manager) ProcessTasks() {
+	for {
+		log.Info().Msg("Processing any tasks in the queue")
+		m.SendWork()
+		log.Info().Msg("Sleeping for 10 seconds")
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func (m *Manager) UpdateTasks() {
+	for {
+		log.Info().Msg("Checking for task updates from workers")
+		m.updateTasks()
+		log.Info().Msg("Task updates completed")
+		log.Info().Msg("Sleeping for 15 seconds")
+		time.Sleep(15 * time.Second)
+	}
 }
